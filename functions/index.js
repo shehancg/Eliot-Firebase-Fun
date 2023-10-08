@@ -6,7 +6,7 @@ const axios = require("axios");
 const {schedule} = require("node-cron");
 // const {onRequest} = require("firebase-functions/v2/https");
 const {onRequest} = require("firebase-functions/v2/https");
-setGlobalOptions({maxInstances: 10});
+setGlobalOptions({maxInstances: 80});
 
 const {initializeApp} = require("firebase-admin/app");
 initializeApp();
@@ -24,9 +24,8 @@ const twilioAuthToken = "b88b3ee4b9bad5eb788b3b016a9abb73";
 
 const client = twilio(twilioAccountSid, twilioAuthToken);
 
-
 // eslint-disable-next-line max-len
-exports.processNewAlertNode = functions.database.ref("/alerts/{alertId}")
+exports.ProcessNewAlertNode = functions.database.ref("/alerts/{alertId}")
     .onCreate((snapshot, context) => {
       // Get the data from the newly added node
       const newData = snapshot.val();
@@ -63,7 +62,8 @@ exports.processNewAlertNode = functions.database.ref("/alerts/{alertId}")
       return null;
     });
 
-exports.processNewAlertNode = functions.database.ref("/alerts/{alertId}")
+// eslint-disable-next-line max-len
+exports.NewAlertNodeAction = functions.runWith({memory: "1GB"}).database.ref("/alerts/{alertId}")
     .onCreate(async (snapshot, context) => {
       const newData = snapshot.val();
       const rpid = newData.RPID || "N/A";
@@ -128,7 +128,7 @@ async function sendSMS(phoneNumber, message) {
 }
 
 // eslint-disable-next-line max-len
-exports.timerFunctionX = onRequest({cors: true, timeoutSeconds: 600, memory: "2GiB"}, async (req, res) => {
+exports.timerFunctionX = onRequest({cors: true, timeoutSeconds: 600, memory: "1GiB"}, async (req, res) => {
   try {
     // Get the alertId from the request query or body
     const alertId = req.query.alertId || req.body.alertId;
@@ -196,18 +196,14 @@ const performBackup = async () => {
   }
 };
 
-// Remove undefined values from an object
-// eslint-disable-next-line no-unused-vars
-
-
 // Schedule the backup task to run every day at 11 PM (UTC time)
 schedule("15 23 * * *", () => {
-  performBackup();
+  performBackup().runWith({memory: "1GB"});
 });
 
 // Export an HTTP function (optional)
 exports.backupData = functions.https.onRequest((req, res) => {
   // Manually trigger the backup (useful for testing)
-  performBackup();
+  performBackup().runWith({memory: "1GB"});
   res.status(200).send("Backup initiated.");
 });

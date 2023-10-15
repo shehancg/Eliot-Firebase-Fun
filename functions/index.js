@@ -118,7 +118,7 @@ exports.NewAlertNodeAction = functions.runWith({memory: "1GB"}).database.ref("/a
           // eslint-disable-next-line max-len
           // await sendSMS(apiKey, phoneNumber, `Alert for RPID ${rpid}: ${alertType}`);
           // eslint-disable-next-line max-len
-          await sendSMS(apiKey, phoneNumber, `Alert !\nUnit - ${unit}\nLine - ${line}\nSMc ID - ${sewingMachineID}\nTime: ${requestTime}`);
+          await sendSMS(apiKey, phoneNumber, `Alert !\nLocation - ${line}\nSMc ID - ${sewingMachineID}\nTime: ${requestTime}`);
           // eslint-disable-next-line max-len
           console.log(`Alert ! [Unit - ${unit}] [Line - ${line}] [SMc ID - ${sewingMachineID}] [Time : ${requestTime}]`);
           console.log(`SMS sent to ${phoneNumber} for alertId: ${alertId}`);

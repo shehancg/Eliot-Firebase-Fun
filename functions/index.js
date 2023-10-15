@@ -4,6 +4,7 @@ const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const axios = require("axios");
 const {schedule} = require("node-cron");
+const request = require("request");
 // const {onRequest} = require("firebase-functions/v2/https");
 const {onRequest} = require("firebase-functions/v2/https");
 setGlobalOptions({maxInstances: 80});
@@ -16,13 +17,7 @@ const realtimeDB = admin.database();
 // Set the ignoreUndefinedProperties setting
 admin.firestore().settings({ignoreUndefinedProperties: true});
 
-// TWILIO
-const twilio = require("twilio");
-
-const twilioAccountSid = "AC10bc1503b2e1c0a9da2f22d83ef81c3d";
-const twilioAuthToken = "b88b3ee4b9bad5eb788b3b016a9abb73";
-
-const client = twilio(twilioAccountSid, twilioAuthToken);
+const apiKey = "Z4ms6wbuxQ6SrMwRhUkA3kt1gURxJome5bsKDzf4";
 
 // eslint-disable-next-line max-len
 exports.ProcessNewAlertNode = functions.database.ref("/alerts/{alertId}")
@@ -62,6 +57,8 @@ exports.ProcessNewAlertNode = functions.database.ref("/alerts/{alertId}")
       return null;
     });
 
+// eslint-disable-next-line no-irregular-whitespace
+// Alert ! [Unit - 1][Line - 3] [SMc ID - 00004] [Time : 23.45]
 // eslint-disable-next-line max-len
 exports.NewAlertNodeAction = functions.runWith({memory: "1GB"}).database.ref("/alerts/{alertId}")
     .onCreate(async (snapshot, context) => {
@@ -76,7 +73,40 @@ exports.NewAlertNodeAction = functions.runWith({memory: "1GB"}).database.ref("/a
       const alertId = context.params.alertId;
 
       // eslint-disable-next-line max-len
+      // Declare variables for line, unit, and sewingMachineID with initial "N/A" values 01795299482
+      let line = "N/A";
+      let unit = "N/A";
+      let sewingMachineID = "N/A";
+
+      // Access data from eliotDevices collection and RX subcollection
+      try {
+        // eslint-disable-next-line max-len
+        const deviceDataRef = admin.database().ref("eliotDevices").child(deviceId).child("RX");
+        const deviceDataSnapshot = await deviceDataRef.once("value");
+        if (deviceDataSnapshot.exists()) {
+          const rxData = deviceDataSnapshot.val();
+          line = rxData.line || "N/A";
+          unit = rxData.unit || "N/A";
+          sewingMachineID = rxData.sewingMachineID || "N/A";
+
+          console.log("Line:", line);
+          console.log("Unit:", unit);
+          console.log("Sewing Machine ID:", sewingMachineID);
+        } else {
+          // eslint-disable-next-line max-len
+          console.log("No data found in the RX subcollection for the specified device.");
+        }
+      } catch (error) {
+        console.error("Error accessing eliotDevices collection:", error);
+      }
+
+      // eslint-disable-next-line max-len
       console.log(`RPID: ${rpid} ALERT ID:${alertId} ALERT TYPE: ${alertType} DEVICE ID: ${deviceId} LOGIN TIME:${loginTime} LOGOUT TIME:${logoutTime} REQUEST TIME:${requestTime} status:${status}`);
+
+      // eslint-disable-next-line max-len
+      console.log(`Line: ${line} Unit: ${unit} SewingMachineID: ${sewingMachineID} Time: ${requestTime}`);
+
+      let smsSent = false; // Flag to track if SMS sending was successful
 
       // Access Firestore to retrieve the phoneNumber based on RPID
       try {
@@ -85,13 +115,36 @@ exports.NewAlertNodeAction = functions.runWith({memory: "1GB"}).database.ref("/a
         if (staffSnapshot.exists) {
           const phoneNumber = staffSnapshot.data().phoneNo;
           // Send an SMS
-          await sendSMS(phoneNumber, `Alert for RPID ${rpid}: ${alertType}`);
+          // eslint-disable-next-line max-len
+          // await sendSMS(apiKey, phoneNumber, `Alert for RPID ${rpid}: ${alertType}`);
+          // eslint-disable-next-line max-len
+          await sendSMS(apiKey, phoneNumber, `Alert !\nUnit - ${unit}\nLine - ${line}\nSMc ID - ${sewingMachineID}\nTime: ${requestTime}`);
+          // eslint-disable-next-line max-len
+          console.log(`Alert ! [Unit - ${unit}] [Line - ${line}] [SMc ID - ${sewingMachineID}] [Time : ${requestTime}]`);
           console.log(`SMS sent to ${phoneNumber} for alertId: ${alertId}`);
+          console.log(`SMS API Response:`, sendSMS); // Print the SMS response
+
+          smsSent = true; // Set the flag to true if SMS is sent successfully
         } else {
           console.error(`No staff record found for RPID: ${rpid}`);
         }
       } catch (error) {
         console.error(`Error accessing Firestore: ${error}`);
+      }
+
+      // Update the smsStatus node based on the SMS sending result
+      try {
+        // eslint-disable-next-line max-len
+        const smsStatusRef = admin.database().ref(`/alerts/${alertId}/smsStatus`);
+        if (smsSent) {
+          // If SMS was sent successfully, set smsStatus to "SENT"
+          await smsStatusRef.set("SENT");
+        } else {
+          // If SMS sending failed, set smsStatus to "FAILED"
+          await smsStatusRef.set("FAILED");
+        }
+      } catch (error) {
+        console.error(`Error updating smsStatus: ${error}`);
       }
 
       // Send an HTTP request to TimerFunction with the alertId
@@ -108,19 +161,23 @@ exports.NewAlertNodeAction = functions.runWith({memory: "1GB"}).database.ref("/a
     });
 
 // eslint-disable-next-line require-jsdoc
-async function sendSMS(phoneNumber, message) {
+async function sendSMS(apiKey, phoneNumber, message) {
   try {
+    const options = {
+      method: "POST",
+      url: "https://api.sms.net.bd/sendsms",
+      formData: {
+        api_key: apiKey,
+        msg: message,
+        to: phoneNumber,
+      },
+    };
+
     // eslint-disable-next-line max-len
-    const twilioPhoneNumber = "+12564554905"; // Replace with your Twilio phone number
+    const response = await request(options); // Use 'await' with 'request-promise'
 
-    const smsMessage = await client.messages.create({
-      body: message,
-      from: twilioPhoneNumber,
-      to: phoneNumber,
-    });
-
-    console.log(`SMS sent to ${smsMessage.to}: ${smsMessage.body}`);
-    return smsMessage;
+    console.log(`SMS sent to ${phoneNumber}: ${message}`);
+    return response; // Return the response
   } catch (error) {
     console.error(`Error sending SMS: ${error.message}`);
     throw error;
@@ -178,9 +235,6 @@ const performBackup = async () => {
       return;
     }
 
-    // Handle undefined values by filtering them out
-    // const cleanedData = removeUndefinedValues(data);
-
     // Create a dynamic Firestore document ID using the current date
     const backupDate = new Date().toISOString();
     const firestoreDocumentId = `backup_${backupDate}`;
@@ -198,12 +252,12 @@ const performBackup = async () => {
 
 // Schedule the backup task to run every day at 11 PM (UTC time)
 schedule("15 23 * * *", () => {
-  performBackup().runWith({memory: "1GB"});
+  performBackup();
 });
 
 // Export an HTTP function (optional)
 exports.backupData = functions.https.onRequest((req, res) => {
   // Manually trigger the backup (useful for testing)
-  performBackup().runWith({memory: "1GB"});
+  performBackup();
   res.status(200).send("Backup initiated.");
 });

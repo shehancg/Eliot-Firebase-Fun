@@ -160,6 +160,68 @@ exports.NewAlertNodeAction = functions.runWith({memory: "1GB"}).database.ref("/a
       return null;
     });
 
+exports.sendSmsOnEffLvChange = functions.runWith({memory: "1GB"}).database
+    .ref("/operators/{operatorId}/effLv")
+    .onUpdate(async (change, context) => {
+      const beforeData = change.before.val();
+      const afterData = change.after.val();
+
+      if (beforeData === 1 && afterData === 0) {
+        // EffLv changed from 1 to 0, send an SMS
+
+        const operatorId = context.params.operatorId;
+
+        // Declare variables outside the if block
+        let effValue; let line; let sewingId; let supervisorId;
+
+        // Access other fields within the same document
+        // eslint-disable-next-line max-len
+        const snapshot = await admin.database().ref(`/operators/${operatorId}`).once("value");
+        const operatorData = snapshot.val();
+
+        if (operatorData) {
+          effValue = operatorData.effValue || "N/A";
+          line = operatorData.line || "N/A";
+          sewingId = operatorData.sewingId || "N/A";
+          supervisorId = operatorData.cSuperviceID || "N/A";
+
+          // Now you can use effValue, line, and sewingId
+          console.log(`EffValue: ${effValue}`);
+          console.log(`Line: ${line}`);
+          console.log(`SewingId: ${sewingId}`);
+          console.log(`supervisorId: ${supervisorId}`);
+        } else {
+          // eslint-disable-next-line max-len
+          console.log("No data found");
+        }
+
+        // Retrieve the phone number from Firestore using supervisorId
+        try {
+          // eslint-disable-next-line max-len
+          const staffSnapshot = await admin.firestore().collection("staff").doc(supervisorId).get();
+
+          if (staffSnapshot.exists) {
+            const phoneNumber = staffSnapshot.data().phoneNo;
+            // Send an SMS
+            // eslint-disable-next-line max-len
+            await sendSMS(apiKey, phoneNumber, `Alert ! \nProduction Efficiency Low\nValue : ${effValue}\nLine : ${line}\nSewing ID : ${sewingId}`);
+            console.log(`SMS sent to ${phoneNumber}`);
+          } else {
+            // eslint-disable-next-line max-len
+            console.error(`No staff record found for Supervisor ID: ${supervisorId}`);
+          }
+        } catch (error) {
+          console.error(`Error accessing Firestore: ${error}`);
+        }
+
+        // Set effLv back to 1 after sending the SMS
+        await admin.database().ref(`/operators/${operatorId}/effLv`).set(1);
+      }
+
+      return null;
+    });
+
+
 // eslint-disable-next-line require-jsdoc
 async function sendSMS(apiKey, phoneNumber, message) {
   try {

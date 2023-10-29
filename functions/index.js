@@ -3,7 +3,7 @@ const {setGlobalOptions} = require("firebase-functions/v2");
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const axios = require("axios");
-const {schedule} = require("node-cron");
+// const {schedule} = require("node-cron");
 const request = require("request");
 // const {onRequest} = require("firebase-functions/v2/https");
 const {onRequest} = require("firebase-functions/v2/https");
@@ -12,8 +12,9 @@ setGlobalOptions({maxInstances: 80});
 const {initializeApp} = require("firebase-admin/app");
 initializeApp();
 // const db = admin.database();
-const firestore = admin.firestore();
+// const firestore = admin.firestore();
 const realtimeDB = admin.database();
+const storage = admin.storage();
 // Set the ignoreUndefinedProperties setting
 admin.firestore().settings({ignoreUndefinedProperties: true});
 
@@ -285,7 +286,7 @@ exports.timerFunctionX = onRequest({cors: true, timeoutSeconds: 600, memory: "1G
 });
 
 // Define a function to perform the backup
-const performBackup = async () => {
+/* const performBackup = async () => {
   try {
     // Get data from Firebase Realtime Database
     // eslint-disable-next-line max-len
@@ -310,16 +311,113 @@ const performBackup = async () => {
   } catch (error) {
     console.error("Error performing backup:", error);
   }
+};*/
+
+
+const realtimeDbBackup = async (context) => {
+  try {
+    // Get a reference to the Realtime Database
+    const databaseRef = admin.database().ref("/");
+
+    // Export the entire Realtime Database
+    const databaseSnapshot = await databaseRef.once("value");
+    const databaseData = databaseSnapshot.val();
+
+    if (!databaseData) {
+      console.error("No data found in Realtime Database.");
+      return null;
+    }
+
+    // Create a folder path for the storage location
+    const folderPath = "REALTIME_DB_DAILY_BACKUP/";
+
+    // Create a filename using the current date and time
+    const currentDate = new Date().toISOString();
+    const filename = folderPath + `REALTIME_DB_BACKUP_${currentDate}.json`;
+
+    // Get a reference to the Firebase Storage bucket
+    const bucket = storage.bucket();
+
+    // Upload the JSON data to Firebase Storage
+    const file = bucket.file(filename);
+    await file.save(JSON.stringify(databaseData), {
+      contentType: "application/json",
+      public: true, // Make the file public
+    });
+
+    console.log(`Realtime Database exported and stored in ${filename}`);
+    return null;
+  } catch (error) {
+    console.error("Error exporting Realtime Database:", error);
+    return null;
+  }
 };
 
-// Schedule the backup task to run every day at 11 PM (UTC time)
-schedule("15 23 * * *", () => {
-  performBackup();
-});
 
-// Export an HTTP function (optional)
+exports.dailyBackup = functions.runWith({
+  // eslint-disable-next-line max-len
+  timeoutSeconds: 540, // Set the maximum execution time to 540 seconds (9 minutes)
+  memory: "1GB", // Set the memory allocation to 2GB
+}).pubsub
+    .schedule("44 22 * * *")
+    .timeZone("Asia/Colombo")
+    .onRun((context) => {
+      realtimeDbBackup();
+      console.log("Running daily backup task.");
+      return null;
+    });
+
+// Export an HTTP function
 exports.backupData = functions.https.onRequest((req, res) => {
   // Manually trigger the backup (useful for testing)
-  performBackup();
+  realtimeDbBackup();
   res.status(200).send("Backup initiated.");
+});
+
+
+// GRAPH BACKUP //
+
+const graphBackup = async () => {
+  try {
+    // Get data from Firebase Realtime Database
+    // eslint-disable-next-line max-len
+    const dataSnapshot = await realtimeDB.ref("/graphs").once("value");
+    const data = dataSnapshot.val();
+
+    if (!data) {
+      console.log("No data found in Graphs");
+      return;
+    }
+
+    // Create a dynamic Firestore document ID using the current date
+    const backupDate = new Date().toISOString().split("T")[0];
+
+    // eslint-disable-next-line max-len
+    // Store data in Realtime Database under a new collection named "graphBackup"
+    await realtimeDB.ref(`/graphBackup/${backupDate}`).set(data);
+
+    console.log("Graph Backup completed successfully.");
+  } catch (error) {
+    console.error("Error performing Graph backup:", error);
+  }
+};
+
+exports.graphBackup = functions.runWith({
+  // eslint-disable-next-line max-len
+  timeoutSeconds: 540, // Set the maximum execution time to 540 seconds (9 minutes)
+  memory: "1GB", // Set the memory allocation to 2GB
+}).pubsub
+    .schedule("40 20 * * *")
+    .timeZone("Asia/Colombo")
+    .onRun((context) => {
+      graphBackup();
+      console.log("Graph Backup Complete");
+      return null;
+    });
+
+// Export an HTTP function (optional)
+exports.graphBackupReq = functions.https.onRequest((req, res) => {
+  // Manually trigger the backup (useful for testing)
+  graphBackup();
+  res.status(200).send("Graph Backup initiated.");
 });

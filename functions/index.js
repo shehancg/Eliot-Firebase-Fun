@@ -359,7 +359,7 @@ exports.dailyBackup = functions.runWith({
   timeoutSeconds: 540, // Set the maximum execution time to 540 seconds (9 minutes)
   memory: "1GB", // Set the memory allocation to 2GB
 }).pubsub
-    .schedule("44 22 * * *")
+    .schedule("30 0 * * *")
     .timeZone("Asia/Colombo")
     .onRun((context) => {
       realtimeDbBackup();
@@ -407,11 +407,11 @@ exports.graphBackup = functions.runWith({
   timeoutSeconds: 540, // Set the maximum execution time to 540 seconds (9 minutes)
   memory: "1GB", // Set the memory allocation to 2GB
 }).pubsub
-    .schedule("40 20 * * *")
+    .schedule("30 0 * * *")
     .timeZone("Asia/Colombo")
     .onRun((context) => {
       graphBackup();
-      console.log("Graph Backup Complete");
+      console.log("Graph Backup Completed.");
       return null;
     });
 

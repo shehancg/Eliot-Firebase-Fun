@@ -431,7 +431,7 @@ exports.updateHourlyRMG = functions.database.ref("/defects/{defectId}/RMGpass")
         const defectId = context.params.defectId;
         // const newValue = change.after.val();
 
-        const currentHour = new Date().getUTCHours().toString();
+        const currentHour = (new Date().getUTCHours() + 6) % 24;
 
         // eslint-disable-next-line max-len
         const graphRef = admin.database().ref(`/graphs/${defectId}/hourlyTargetVsActualTargetRMG/${currentHour}/actualRMG`);

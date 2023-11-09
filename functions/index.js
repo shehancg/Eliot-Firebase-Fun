@@ -363,7 +363,7 @@ exports.dailyBackup = functions.runWith({
     .timeZone("Asia/Colombo")
     .onRun((context) => {
       realtimeDbBackup();
-      console.log("Running daily backup task.");
+      console.log("Running daily backup task");
       return null;
     });
 
@@ -421,3 +421,27 @@ exports.graphBackupReq = functions.https.onRequest((req, res) => {
   graphBackup();
   res.status(200).send("Graph Backup initiated.");
 });
+
+
+// Defects Trigger //
+
+exports.updateHourlyRMG = functions.database.ref("/defects/{defectId}/RMGpass")
+    .onUpdate(async (change, context) => {
+      try {
+        const defectId = context.params.defectId;
+        const newValue = change.after.val();
+
+        const currentHour = new Date().getUTCHours().toString();
+
+        // eslint-disable-next-line max-len
+        const graphRef = admin.database().ref(`/graphs/${defectId}/hourlyTargetVsActualTargetRMG/${currentHour}/actualRMG`);
+        await graphRef.set(newValue + 1);
+        // eslint-disable-next-line max-len
+        console.log(`Actual RMG value for hour ${currentHour} updated to ${newValue + 1}`);
+
+        return null;
+      } catch (error) {
+        console.error(`Error updating hourly RMG: ${error}`);
+        return null;
+      }
+    });

@@ -429,15 +429,21 @@ exports.updateHourlyRMG = functions.database.ref("/defects/{defectId}/RMGpass")
     .onUpdate(async (change, context) => {
       try {
         const defectId = context.params.defectId;
-        const newValue = change.after.val();
+        // const newValue = change.after.val();
 
         const currentHour = new Date().getUTCHours().toString();
 
         // eslint-disable-next-line max-len
         const graphRef = admin.database().ref(`/graphs/${defectId}/hourlyTargetVsActualTargetRMG/${currentHour}/actualRMG`);
-        await graphRef.set(newValue + 1);
+        // await graphRef.set(newValue + 1);
+
+        await graphRef.transaction((currentValue) => {
+          // Increment the actualRMG count by 1
+          return (currentValue || 0) + 1;
+        });
+
         // eslint-disable-next-line max-len
-        console.log(`Actual RMG value for hour ${currentHour} updated to ${newValue + 1}`);
+        console.log(`Actual RMG value for hour ${currentHour} updated`);
 
         return null;
       } catch (error) {

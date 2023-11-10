@@ -423,7 +423,7 @@ exports.graphBackupReq = functions.https.onRequest((req, res) => {
 });
 
 
-// Defects Trigger //
+// HOURLY TARGET ACTUAL TARGET TRIGGER FOR GRAPH //
 
 exports.updateHourlyRMG = functions.database.ref("/defects/{defectId}/RMGpass")
     .onUpdate(async (change, context) => {
@@ -448,6 +448,75 @@ exports.updateHourlyRMG = functions.database.ref("/defects/{defectId}/RMGpass")
         return null;
       } catch (error) {
         console.error(`Error updating hourly RMG: ${error}`);
+        return null;
+      }
+    });
+
+
+// TRIGGER FOR UPDATING GRAPHS WHEN DEFECTS OCCUR //
+
+// eslint-disable-next-line max-len
+exports.updateGraphDefectCounts = functions.database.ref("/defects/{obbID}/RMGdefects/{defectName}")
+    .onUpdate(async (change, context) => {
+      try {
+        const obbID = context.params.obbID;
+        const defectName = context.params.defectName;
+
+        // Mapping of defect names to their corresponding array indexes
+        const defectIndexMap = {
+          "OpenSeam": 0,
+          "NeedleHole": 1,
+          "BrokenStitches": 2,
+          "SkippedStitches": 3,
+          "IncorrectColour": 4,
+          "IncorrectSPI": 5,
+          "Bubbling": 6,
+          "Damagedfabric": 7,
+          "LabelDefect": 8,
+          "Threadtension": 9,
+          "ZipperIssue": 10,
+          "Mainlabelspot": 11,
+          "ButtonIssue": 12,
+          "IncorrectMeasurement": 13,
+          "Untrimmedthreads": 14,
+          "ShadeDifference": 15,
+          "FabricMarks": 16,
+          "stains": 17,
+          "dirt": 18,
+          "oilStains": 19,
+          "Seampucker": 20,
+        };
+
+        // Get the corresponding index from the map
+        const defectIndex = defectIndexMap[defectName];
+
+        if (defectIndex !== undefined) {
+          // Get the current defectCounts array
+          // eslint-disable-next-line max-len
+          const graphRef = admin.database().ref(`/graphs/${obbID}/garmentDefects/totalDefectCounts`);
+          const snapshot = await graphRef.once("value");
+          const defectCounts = snapshot.val() || [];
+
+          // Increment the value at the corresponding index
+          if (defectCounts.length > defectIndex) {
+            defectCounts[defectIndex] = (defectCounts[defectIndex] || 0) + 1;
+
+            // Update the array in the database
+            await graphRef.set(defectCounts);
+            // eslint-disable-next-line max-len
+            console.log(`Defect count for "${defectName}" incremented in array.`);
+          } else {
+            // eslint-disable-next-line max-len
+            console.error(`Array is not long enough to update defect count for "${defectName}".`);
+          }
+        } else {
+          // eslint-disable-next-line max-len
+          console.error(`Defect name "${defectName}" not found in the index map.`);
+        }
+
+        return null;
+      } catch (error) {
+        console.error(`Error updating defect counts: ${error}`);
         return null;
       }
     });

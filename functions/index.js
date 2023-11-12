@@ -476,7 +476,7 @@ exports.updateHourlyRMG = functions.database.ref("/defects/{defectId}/RMGpass")
             await graphRefActualTarget.transaction(() => RMGpassValue);
 
             await graphRefHourlyTarget.transaction((currentData) => {
-              return targetRMG || "N/A";
+              return targetRMG * (collectionIndex+1) || "N/A";
             });
 
             // eslint-disable-next-line max-len

@@ -435,7 +435,10 @@ exports.updateHourlyRMG = functions.database.ref("/defects/{defectId}/RMGpass")
         // Get the updated value of RMGpass
         const RMGpassValue = change.after.val();
 
+        // Defect ID is same as OBBS Id
         const defectId = context.params.defectId;
+
+        // Current hour according to Bangladesh Time
         const currentHour = (new Date().getUTCHours() + 6) % 24;
 
         // Mapping to determine the collection index based on the current hour
@@ -453,9 +456,6 @@ exports.updateHourlyRMG = functions.database.ref("/defects/{defectId}/RMGpass")
           "18": 10,
           "19": 11,
           "20": 12,
-          "21": 13,
-          "22": 14,
-          "23": 15,
         };
 
         const collectionIndex = hourIndexMap[currentHour.toString()];
@@ -482,7 +482,7 @@ exports.updateHourlyRMG = functions.database.ref("/defects/{defectId}/RMGpass")
             // eslint-disable-next-line max-len
             console.log(`Actual RMG value for hour ${currentHour} updated in collection ${collectionIndex} ${defectId} ${targetRMG} ${line}`);
           } else {
-            console.error(`No staff record found for defectId: ${defectId}`);
+            console.error(`No OBBS record found for OBBS ID: ${defectId}`);
           }
         } catch (error) {
           console.error(`Error accessing Firestore: ${error}`);

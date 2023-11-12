@@ -428,13 +428,14 @@ exports.graphBackupReq = functions.https.onRequest((req, res) => {
 
 // HOURLY TARGET ACTUAL TARGET TRIGGER FOR GRAPH //
 
+// eslint-disable-next-line max-len
 exports.updateHourlyRMG = functions.database.ref("/defects/{defectId}/RMGpass")
     .onUpdate(async (change, context) => {
       try {
-        // Extract the defectId from the Cloud Function context
-        const defectId = context.params.defectId;
+        // Get the updated value of RMGpass
+        const RMGpassValue = change.after.val();
 
-        // Calculate the current hour in the timezone of Bangladesh
+        const defectId = context.params.defectId;
         const currentHour = (new Date().getUTCHours() + 6) % 24;
 
         // Mapping to determine the collection index based on the current hour
@@ -452,137 +453,43 @@ exports.updateHourlyRMG = functions.database.ref("/defects/{defectId}/RMGpass")
           "18": 10,
           "19": 11,
           "20": 12,
+          "21": 13,
+          "22": 14,
+          "23": 15,
         };
 
-        // Determine the collection index based on the current hour
         const collectionIndex = hourIndexMap[currentHour.toString()];
 
-        // Retrieve the targetRMG & line from Firestore using the defectId
         try {
           // eslint-disable-next-line max-len
           const staffSnapshot = await admin.firestore().collection("OBBS").doc(defectId).get();
 
           if (staffSnapshot.exists) {
-            // Extract targetRMG and line from the Firestore document
             const targetRMG = staffSnapshot.data().Target100;
             const line = staffSnapshot.data().ProductionLine;
 
-            // Reference to the Realtime Database location for the current hour
             // eslint-disable-next-line max-len
-            const graphRef = admin.database().ref(`/graphs/${defectId}/hourlyTargetVsActualTargetRMG/${collectionIndex}`);
-
+            const graphRefActualTarget = admin.database().ref(`/graphs/${defectId}/hourlyTargetRMGVsActualTargetRMG/actualTarget/${collectionIndex}`);
             // eslint-disable-next-line max-len
-            // Update the Realtime Database location atomically using a transaction
-            await graphRef.transaction((currentData) => {
-              // Increment the actualRMG count by 1
-              // eslint-disable-next-line max-len
-              const newActualRMG = (currentData && currentData.actualRMG) ? currentData.actualRMG + 1 : 1;
+            const graphRefHourlyTarget = admin.database().ref(`/graphs/${defectId}/hourlyTargetRMGVsActualTargetRMG/hourlyTarget/${collectionIndex}`);
 
-              // Update targetRMG and line in the Realtime Database
-              return {
-                actualRMG: newActualRMG,
-                targetRMG: targetRMG || "N/A",
-                line: line || "N/A",
-              };
+            await graphRefActualTarget.transaction(() => RMGpassValue);
+
+            await graphRefHourlyTarget.transaction((currentData) => {
+              return targetRMG || "N/A";
             });
 
-            // Log a message indicating the successful update
             // eslint-disable-next-line max-len
-            console.log(`Actual RMG value for hour ${currentHour} updated in collection ${collectionIndex} ${defectId} ${targetRMG} ${line} `);
+            console.log(`Actual RMG value for hour ${currentHour} updated in collection ${collectionIndex} ${defectId} ${targetRMG} ${line}`);
           } else {
-            // Log an error message if the document is not found in Firestore
             console.error(`No staff record found for defectId: ${defectId}`);
           }
         } catch (error) {
-          // Log an error message if there's an issue accessing Firestore
           console.error(`Error accessing Firestore: ${error}`);
         }
 
-        // Return null to indicate successful execution of the Cloud Function
         return null;
       } catch (error) {
-        // Log an error message if there's an issue in the Cloud Function
-        console.error(`Error updating hourly RMG: ${error}`);
-        return null;
-      }
-    });
-
-
-// eslint-disable-next-line max-len
-exports.updateHourlyRMGNew = functions.database.ref("/defects/{defectId}/RMGpass")
-    .onUpdate(async (change, context) => {
-      try {
-        // Extract the defectId from the Cloud Function context
-        const defectId = context.params.defectId;
-
-        // Calculate the current hour in the timezone of Bangladesh
-        const currentHour = (new Date().getUTCHours() + 6) % 24;
-
-        // Mapping to determine the collection index based on the current hour
-        const hourIndexMap = {
-          "8": 0,
-          "9": 1,
-          "10": 2,
-          "11": 3,
-          "12": 4,
-          "13": 5,
-          "14": 6,
-          "15": 7,
-          "16": 8,
-          "17": 9,
-          "18": 10,
-          "19": 11,
-          "20": 12,
-        };
-
-        // Determine the collection index based on the current hour
-        const collectionIndex = hourIndexMap[currentHour.toString()];
-
-        // Retrieve the targetRMG & line from Firestore using the defectId
-        try {
-          // eslint-disable-next-line max-len
-          const staffSnapshot = await admin.firestore().collection("OBBS").doc(defectId).get();
-
-          if (staffSnapshot.exists) {
-            // Extract targetRMG and line from the Firestore document
-            const targetRMG = staffSnapshot.data().Target100;
-            const line = staffSnapshot.data().ProductionLine;
-
-            // Reference to the Realtime Database location for the current hour
-            // eslint-disable-next-line max-len
-            const graphRef = admin.database().ref(`/graphs/hourlyTargetVsActualTargetRMG/${defectId}/${collectionIndex}`);
-
-            // eslint-disable-next-line max-len
-            // Update the Realtime Database location atomically using a transaction
-            await graphRef.transaction((currentData) => {
-              // Increment the actualRMG count by 1
-              // eslint-disable-next-line max-len
-              const newActualRMG = (currentData && currentData.actualRMG) ? currentData.actualRMG + 1 : 1;
-
-              // Update targetRMG and line in the Realtime Database
-              return {
-                actualRMG: newActualRMG,
-                targetRMG: targetRMG || "N/A",
-                line: line || "N/A",
-              };
-            });
-
-            // Log a message indicating the successful update
-            // eslint-disable-next-line max-len
-            console.log(`Actual RMG value for hour ${currentHour} updated in collection ${collectionIndex} ${defectId} ${targetRMG} ${line} `);
-          } else {
-            // Log an error message if the document is not found in Firestore
-            console.error(`No staff record found for defectId: ${defectId}`);
-          }
-        } catch (error) {
-          // Log an error message if there's an issue accessing Firestore
-          console.error(`Error accessing Firestore: ${error}`);
-        }
-
-        // Return null to indicate successful execution of the Cloud Function
-        return null;
-      } catch (error) {
-        // Log an error message if there's an issue in the Cloud Function
         console.error(`Error updating hourly RMG: ${error}`);
         return null;
       }

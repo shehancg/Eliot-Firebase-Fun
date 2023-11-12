@@ -181,10 +181,13 @@ exports.sendSmsOnEffLvChange = functions.runWith({memory: "1GB"}).database
         const operatorData = snapshot.val();
 
         if (operatorData) {
-          effValue = operatorData.effValue || "N/A";
+          // eslint-disable-next-line max-len
+          effValue = operatorData.effValue !== undefined ? operatorData.effValue : "N/A";
           line = operatorData.line || "N/A";
-          sewingId = operatorData.sewingId || "N/A";
-          supervisorId = operatorData.cSuperviceID || "N/A";
+          // eslint-disable-next-line max-len
+          sewingId = operatorData.sewingId !== undefined ? operatorData.sewingId : "N/A";
+          // eslint-disable-next-line max-len
+          supervisorId = operatorData.cSuperviceID !== undefined ? operatorData.cSuperviceID : "N/A";
 
           // Now you can use effValue, line, and sewingId
           console.log(`EffValue: ${effValue}`);
@@ -205,7 +208,7 @@ exports.sendSmsOnEffLvChange = functions.runWith({memory: "1GB"}).database
             const phoneNumber = staffSnapshot.data().phoneNo;
             // Send an SMS
             // eslint-disable-next-line max-len
-            await sendSMS(apiKey, phoneNumber, `Alert ! \nProduction Efficiency Low\nValue : ${effValue}\nLine : ${line}\nSewing ID : ${sewingId}`);
+            await sendSMS(apiKey, phoneNumber, `Alert ! \nProduction Efficiency Low\nEfficiency Value : ${effValue}\nLine : ${line}\nSewing ID : ${sewingId}`);
             console.log(`SMS sent to ${phoneNumber}`);
           } else {
             // eslint-disable-next-line max-len

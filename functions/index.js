@@ -119,7 +119,7 @@ exports.NewAlertNodeAction = functions.runWith({memory: "1GB"}).database.ref("/a
           // eslint-disable-next-line max-len
           // await sendSMS(apiKey, phoneNumber, `Alert for RPID ${rpid}: ${alertType}`);
           // eslint-disable-next-line max-len
-          await sendSMS(apiKey, phoneNumber, `Alert !\nLocation - ${line}\nSMc ID - ${sewingMachineID}\nTime: ${requestTime}`);
+          await sendSMS(apiKey, phoneNumber, `${alertType} Alert !\nLocation - ${line}\nSMc ID - ${sewingMachineID}\nTime: ${requestTime}`);
           // eslint-disable-next-line max-len
           console.log(`Alert ! [Unit - ${unit}] [Line - ${line}] [SMc ID - ${sewingMachineID}] [Time : ${requestTime}]`);
           console.log(`SMS sent to ${phoneNumber} for alertId: ${alertId}`);
@@ -251,7 +251,7 @@ async function sendSMS(apiKey, phoneNumber, message) {
 }
 
 // eslint-disable-next-line max-len
-exports.timerFunctionX = onRequest({cors: true, timeoutSeconds: 600, memory: "1GiB"}, async (req, res) => {
+exports.timerFunctionX = onRequest({cors: true, timeoutSeconds: 900, memory: "1GiB"}, async (req, res) => {
   try {
     // Get the alertId from the request query or body
     const alertId = req.query.alertId || req.body.alertId;

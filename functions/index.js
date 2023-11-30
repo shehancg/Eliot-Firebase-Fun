@@ -563,3 +563,56 @@ exports.updateGraphDefectCounts = functions.database.ref("/defects/{obbID}/RMGde
         return null;
       }
     });
+
+// SCHEDULER FUNCTION FOR TURNING VALUES IN GRAPHS
+
+// Define the scheduled function
+// eslint-disable-next-line max-len
+exports.updateValuesProductionEff = functions.pubsub.schedule("00 21 * * *") // Runs every day at 11:00 PM
+    .timeZone("Asia/Colombo") // Set the timezone to Colombo
+    .onRun(async (context) => {
+      try {
+        const db = admin.database();
+
+        // Get a snapshot of all OBBS nodes
+        const obbsSnapshot = await db.ref("/graphs").once("value");
+
+        // Convert the snapshot to a JavaScript object
+        const obbsData = obbsSnapshot.toJSON();
+
+        // Check if the data is available and is iterable
+        if (obbsData) {
+          // Iterate through each OBBS node
+          for (const obbsId of Object.keys(obbsData)) {
+            // Loop through collections from 0 to 11 for each OBBS node
+            for (let i = 0; i < 12; i++) {
+              // eslint-disable-next-line max-len
+              const collectionRef = db.ref(`/graphs/${obbsId}/productionEfficiencyAcrossOperations/${i}`);
+
+              // eslint-disable-next-line max-len
+              // Loop through collections from 0 to 3 inside each outer collection
+              for (let j = 0; j < 4; j++) {
+                const innerCollectionRef = collectionRef.child(`${j}`);
+
+                // Update the values x and y to 'operation' and -1 respectively
+                await innerCollectionRef.update({
+                  x: "operation",
+                  y: -1,
+                });
+
+                // eslint-disable-next-line max-len
+                console.log(`Values updated at ${innerCollectionRef.toString()}`);
+              }
+            }
+          }
+        }
+
+        console.log("Scheduled function executed successfully.");
+        return null;
+      } catch (error) {
+        console.error("Error in scheduled function:", error);
+        return null;
+      }
+    });
+
+

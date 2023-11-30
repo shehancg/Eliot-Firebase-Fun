@@ -569,7 +569,7 @@ exports.updateGraphDefectCounts = functions.database.ref("/defects/{obbID}/RMGde
 // COLLECTION productionEfficiencyAcrossOperations
 // Define the scheduled function
 // eslint-disable-next-line max-len
-exports.updateValuesProductionEff = functions.pubsub.schedule("00 21 * * *") // Runs every day at 11:00 PM
+exports.updateValuesProductionEff = functions.pubsub.schedule("00 2 * * *") // Runs every day at 11:00 PM
     .timeZone("Asia/Colombo") // Set the timezone to Colombo
     .onRun(async (context) => {
       try {
@@ -618,7 +618,7 @@ exports.updateValuesProductionEff = functions.pubsub.schedule("00 21 * * *") // 
 
 // COLLECTION productionFlowAcrossOperations
 // eslint-disable-next-line max-len
-exports.updateValuesProductionFlow = functions.pubsub.schedule("18 21 * * *") // Runs every day at 11:00 PM
+exports.updateValuesProductionFlow = functions.pubsub.schedule("00 2 * * *") // Runs every day at 11:00 PM
     .timeZone("Asia/Colombo") // Set the timezone to Colombo
     .onRun(async (context) => {
       try {
@@ -667,7 +667,7 @@ exports.updateValuesProductionFlow = functions.pubsub.schedule("18 21 * * *") //
 
 // COLLECTION productionFlowAcrossOperations
 // eslint-disable-next-line max-len
-exports.updateOperatorEff = functions.pubsub.schedule("05 23 * * *") // Runs every day at 11:00 PM
+exports.updateOperatorEff = functions.pubsub.schedule("00 2 * * *") // Runs every day at 11:00 PM
     .timeZone("Asia/Colombo") // Set the timezone to Bangladesh
     .onRun(async (context) => {
       try {
@@ -704,3 +704,56 @@ exports.updateOperatorEff = functions.pubsub.schedule("05 23 * * *") // Runs eve
         return null;
       }
     });
+
+// eslint-disable-next-line max-len
+exports.updateHourlyVsActual = functions.pubsub.schedule("00 2 * * *")
+    .timeZone("Asia/Colombo")
+    .onRun(async (context) => {
+      try {
+        const db = admin.database();
+
+        // Get a snapshot of all OBBS nodes
+        const obbsSnapshot = await db.ref("/graphs").once("value");
+
+        // Iterate through each OBBS node
+        obbsSnapshot.forEach((obbsChild) => {
+          const obbsId = obbsChild.key;
+
+          // Iterate through each sub-collection (0 to 11)
+          for (let i = 0; i < 12; i++) {
+            // Update values inside actualTarget collection
+            // eslint-disable-next-line max-len
+            const actualTargetRef = db.ref(`/graphs/${obbsId}/hourlyTargetVsActualTarget/${i}/actualTarget/`);
+            actualTargetRef.once("value", (snapshot) => {
+              // eslint-disable-next-line max-len
+              // Iterate through each node in actualTarget and set the value to 0
+              snapshot.forEach((actualTargetNode) => {
+                actualTargetRef.child(actualTargetNode.key).set(0);
+                // eslint-disable-next-line max-len
+                console.log(`Value updated to 0 in actualTarget for OBBS ID: ${obbsId}, Collection: ${i}, Node: ${actualTargetNode.key}`);
+              });
+            });
+
+            // Update values inside hourlyTarget collection
+            // eslint-disable-next-line max-len
+            const hourlyTargetRef = db.ref(`/graphs/${obbsId}/hourlyTargetVsActualTarget/${i}/hourlyTarget/`);
+            hourlyTargetRef.once("value", (snapshot) => {
+              // eslint-disable-next-line max-len
+              // Iterate through each node in hourlyTarget and set the value to 0
+              snapshot.forEach((hourlyTargetNode) => {
+                hourlyTargetRef.child(hourlyTargetNode.key).set(0);
+                // eslint-disable-next-line max-len
+                console.log(`Value updated to 0 in hourlyTarget for OBBS ID: ${obbsId}, Collection: ${i}, Node: ${hourlyTargetNode.key}`);
+              });
+            });
+          }
+        });
+
+        console.log("Scheduled function executed successfully.");
+        return null;
+      } catch (error) {
+        console.error("Error in scheduled function:", error);
+        return null;
+      }
+    });
+

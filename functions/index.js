@@ -665,3 +665,42 @@ exports.updateValuesProductionFlow = functions.pubsub.schedule("18 21 * * *") //
       }
     });
 
+// COLLECTION productionFlowAcrossOperations
+// eslint-disable-next-line max-len
+exports.updateOperatorEff = functions.pubsub.schedule("05 23 * * *") // Runs every day at 11:00 PM
+    .timeZone("Asia/Colombo") // Set the timezone to Bangladesh
+    .onRun(async (context) => {
+      try {
+        const db = admin.database();
+
+        // Get a snapshot of all OBBS nodes
+        const obbsSnapshot = await db.ref("/graphs").once("value");
+
+        // Iterate through each OBBS node
+        obbsSnapshot.forEach((obbsChild) => {
+          const obbsId = obbsChild.key;
+
+          // Get a snapshot of the efficiency nodes for the current OBBS ID
+          // eslint-disable-next-line max-len
+          const efficiencySnapshot = obbsChild.child("operatorEfficiency/efficiency/");
+
+          // Check if the data is available
+          if (efficiencySnapshot.exists()) {
+            // Iterate through each node and set its value to 0
+            efficiencySnapshot.forEach((node) => {
+              const nodeRef = node.ref;
+              nodeRef.set(0); // Set the value to 0
+              console.log(`Value updated to 0 at ${nodeRef.toString()}`);
+            });
+          } else {
+            console.log(`No efficiency nodes found for OBBS ID: ${obbsId}`);
+          }
+        });
+
+        console.log("Scheduled function executed successfully.");
+        return null;
+      } catch (error) {
+        console.error("Error in scheduled function:", error);
+        return null;
+      }
+    });

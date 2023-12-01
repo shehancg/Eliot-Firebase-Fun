@@ -569,8 +569,8 @@ exports.updateGraphDefectCounts = functions.database.ref("/defects/{obbID}/RMGde
 // COLLECTION productionEfficiencyAcrossOperations
 // Define the scheduled function
 // eslint-disable-next-line max-len
-exports.updateValuesProductionEff = functions.pubsub.schedule("00 2 * * *") // Runs every day at 11:00 PM
-    .timeZone("Asia/Colombo") // Set the timezone to Colombo
+exports.updateValuesProductionEff = functions.pubsub.schedule("00 2 * * *")
+    .timeZone("Asia/Colombo")
     .onRun(async (context) => {
       try {
         const db = admin.database();
@@ -579,7 +579,7 @@ exports.updateValuesProductionEff = functions.pubsub.schedule("00 2 * * *") // R
         const obbsSnapshot = await db.ref("/graphs").once("value");
 
         // Convert the snapshot to a JavaScript object
-        const obbsData = obbsSnapshot.toJSON();
+        const obbsData = obbsSnapshot.val();
 
         // Check if the data is available and is iterable
         if (obbsData) {
@@ -591,18 +591,30 @@ exports.updateValuesProductionEff = functions.pubsub.schedule("00 2 * * *") // R
               const collectionRef = db.ref(`/graphs/${obbsId}/productionEfficiencyAcrossOperations/${i}`);
 
               // eslint-disable-next-line max-len
-              // Loop through collections from 0 to 3 inside each outer collection
-              for (let j = 0; j < 4; j++) {
-                const innerCollectionRef = collectionRef.child(`${j}`);
+              // Get a snapshot of the inner collections (all inner collections dynamically)
+              // eslint-disable-next-line max-len
+              const innerCollectionsSnapshot = await collectionRef.once("value");
 
-                // Update the values x and y to 'operation' and -1 respectively
-                await innerCollectionRef.update({
-                  x: "operation",
-                  y: -1,
+              // Check if the innerCollectionsSnapshot has children
+              if (innerCollectionsSnapshot.exists()) {
+                // Iterate through inner collections
+                innerCollectionsSnapshot.forEach((innerCollection) => {
+                  // Get the key (inner collection number)
+                  const innerCollectionNumber = innerCollection.key;
+
+                  // eslint-disable-next-line max-len
+                  // Update the values x and y to 'operation' and -1 respectively
+                  collectionRef.child(innerCollectionNumber).update({
+                    x: "operation",
+                    y: -1,
+                  });
+
+                  // eslint-disable-next-line max-len
+                  console.log(`Values updated at ${collectionRef.child(innerCollectionNumber).toString()}`);
                 });
-
+              } else {
                 // eslint-disable-next-line max-len
-                console.log(`Values updated at ${innerCollectionRef.toString()}`);
+                console.error(`No inner collections found for OBBS ID: ${obbsId}, collection: ${i}`);
               }
             }
           }
@@ -615,6 +627,7 @@ exports.updateValuesProductionEff = functions.pubsub.schedule("00 2 * * *") // R
         return null;
       }
     });
+
 
 // COLLECTION productionFlowAcrossOperations
 // eslint-disable-next-line max-len
@@ -640,14 +653,19 @@ exports.updateValuesProductionFlow = functions.pubsub.schedule("00 2 * * *") // 
               const collectionRef = db.ref(`/graphs/${obbsId}/productionFlowAcrossOperations/${i}`);
 
               // eslint-disable-next-line max-len
-              // Loop through collections from 0 to 3 inside each outer collection
-              for (let j = 0; j < 4; j++) {
+              // Get the number of iterations for the inner loop dynamically
+              // eslint-disable-next-line max-len
+              const innerLoopIterations = await collectionRef.once("value").then((snapshot) => snapshot.numChildren());
+
+              // eslint-disable-next-line max-len
+              // Loop through collections from 0 to the number of iterations inside each outer collection
+              for (let j = 0; j < innerLoopIterations; j++) {
                 const innerCollectionRef = collectionRef.child(`${j}`);
 
-                // Update the values x and y to 'operation' and -1 respectively
+                // Update the values x and y to 'operation' and 0 respectively
                 await innerCollectionRef.update({
                   x: "operation",
-                  y: -1,
+                  y: 0,
                 });
 
                 // eslint-disable-next-line max-len
@@ -664,6 +682,7 @@ exports.updateValuesProductionFlow = functions.pubsub.schedule("00 2 * * *") // 
         return null;
       }
     });
+
 
 // COLLECTION productionFlowAcrossOperations
 // eslint-disable-next-line max-len
@@ -756,4 +775,3 @@ exports.updateHourlyVsActual = functions.pubsub.schedule("00 2 * * *")
         return null;
       }
     });
-

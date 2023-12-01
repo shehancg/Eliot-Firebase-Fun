@@ -775,3 +775,53 @@ exports.updateHourlyVsActual = functions.pubsub.schedule("00 2 * * *")
         return null;
       }
     });
+
+
+// eslint-disable-next-line max-len
+exports.updateHourlyVsActualRMG = functions.pubsub.schedule("00 2 * * *")
+    .timeZone("Asia/Colombo")
+    .onRun(async (context) => {
+      try {
+        const db = admin.database();
+
+        // Get a snapshot of all OBBS nodes
+        const obbsSnapshot = await db.ref("/graphs").once("value");
+
+        // Iterate through each OBBS node
+        obbsSnapshot.forEach((obbsChild) => {
+          const obbsId = obbsChild.key;
+
+          // Update values inside actualTarget collection
+          // eslint-disable-next-line max-len
+          const actualTargetRef = db.ref(`/graphs/${obbsId}/hourlyTargetRMGVsActualTargetRMG/actualTarget/`);
+          actualTargetRef.once("value", (snapshot) => {
+            // eslint-disable-next-line max-len
+            // Iterate through each node in actualTarget and set the value to 0
+            snapshot.forEach((actualTargetNode) => {
+              actualTargetRef.child(actualTargetNode.key).set(0);
+              // eslint-disable-next-line max-len
+              console.log(`Value updated to 0 in actualTarget for OBBS ID: ${obbsId}, Node: ${actualTargetNode.key}`);
+            });
+          });
+
+          // Update values inside hourlyTarget collection
+          // eslint-disable-next-line max-len
+          const hourlyTargetRef = db.ref(`/graphs/${obbsId}/hourlyTargetRMGVsActualTargetRMG/hourlyTarget/`);
+          hourlyTargetRef.once("value", (snapshot) => {
+            // eslint-disable-next-line max-len
+            // Iterate through each node in hourlyTarget and set the value to 0
+            snapshot.forEach((hourlyTargetNode) => {
+              hourlyTargetRef.child(hourlyTargetNode.key).set(0);
+              // eslint-disable-next-line max-len
+              console.log(`Value updated to 0 in hourlyTarget for OBBS ID: ${obbsId},Node: ${hourlyTargetNode.key}`);
+            });
+          });
+        });
+
+        console.log("Scheduled function executed successfully.");
+        return null;
+      } catch (error) {
+        console.error("Error in scheduled function:", error);
+        return null;
+      }
+    });

@@ -825,3 +825,39 @@ exports.updateHourlyVsActualRMG = functions.pubsub.schedule("00 2 * * *")
         return null;
       }
     });
+
+// eslint-disable-next-line max-len
+exports.updateTotalDefectCounts = functions.pubsub.schedule("14 22 * * *") // Runs every day at 8:31 PM UTC (2:31 AM Colombo time)
+    .timeZone("Asia/Colombo") // Set the timezone to Colombo
+    .onRun(async (context) => {
+      try {
+        const db = admin.database();
+
+        // Get a snapshot of all OBBS nodes
+        const obbsSnapshot = await db.ref("/graphs").once("value");
+
+        // Iterate through each OBBS node
+        obbsSnapshot.forEach((obbsChild) => {
+          const obbsId = obbsChild.key;
+
+          // eslint-disable-next-line max-len
+          const totalDefectCountsRef = db.ref(`/graphs/${obbsId}/garmentDefects/totalDefectCounts`);
+
+          totalDefectCountsRef.once("value", (snapshot) => {
+            // eslint-disable-next-line max-len
+            // Iterate through each node in actualTarget and set the value to 0
+            snapshot.forEach((actualTargetNode) => {
+              totalDefectCountsRef.child(actualTargetNode.key).set(0);
+              // eslint-disable-next-line max-len
+              console.log(`Garment Defect for OBBS ID: ${obbsId}, Node: ${actualTargetNode.key}`);
+            });
+          });
+        });
+
+        console.log("Scheduled function executed successfully.");
+        return null;
+      } catch (error) {
+        console.error("Error in scheduled function:", error);
+        return null;
+      }
+    });

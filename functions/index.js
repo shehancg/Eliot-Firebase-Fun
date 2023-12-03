@@ -827,7 +827,7 @@ exports.updateHourlyVsActualRMG = functions.pubsub.schedule("00 2 * * *")
     });
 
 // eslint-disable-next-line max-len
-exports.updateTotalDefectCounts = functions.pubsub.schedule("14 22 * * *") // Runs every day at 8:31 PM UTC (2:31 AM Colombo time)
+exports.updateTotalDefectCounts = functions.pubsub.schedule("00 02 * * *") // Runs every day at 8:31 PM UTC (2:31 AM Colombo time)
     .timeZone("Asia/Colombo") // Set the timezone to Colombo
     .onRun(async (context) => {
       try {

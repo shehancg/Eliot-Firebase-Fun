@@ -3,6 +3,7 @@ const {setGlobalOptions} = require("firebase-functions/v2");
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const axios = require("axios");
+const nodemailer = require("nodemailer");
 // const {schedule} = require("node-cron");
 const request = require("request");
 // const {onRequest} = require("firebase-functions/v2/https");
@@ -206,10 +207,18 @@ exports.sendSmsOnEffLvChange = functions.runWith({memory: "1GB"}).database
 
           if (staffSnapshot.exists) {
             const phoneNumber = staffSnapshot.data().phoneNo;
+
+            const email = staffSnapshot.data().email;
+
             // Send an SMS
             // eslint-disable-next-line max-len
             await sendSMS(apiKey, phoneNumber, `Alert ! \nProduction Efficiency Low\nEfficiency Value : ${effValue}\nLine : ${line}\nSewing ID : ${sewingId}`);
             console.log(`SMS sent to ${phoneNumber}`);
+
+            // Send an email
+            // eslint-disable-next-line max-len
+            await sendEmail(email, `Production Efficiency Alert `, `Alert ! \nProduction Efficiency Low\nEfficiency Value : ${effValue}\nLine : ${line}\nSewing ID : ${sewingId}`);
+            console.log(`Email sent to ${email}`);
           } else {
             // eslint-disable-next-line max-len
             console.error(`No staff record found for Supervisor ID: ${supervisorId}`);
@@ -224,6 +233,34 @@ exports.sendSmsOnEffLvChange = functions.runWith({memory: "1GB"}).database
 
       return null;
     });
+
+// Function to send an email
+const sendEmail = async (to, subject, message) => {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    host: "smtp.gmail.net",
+    port: 587,
+    secure: false,
+    auth: {
+      user: "cgshehan@gmail.com", // Replace with your Gmail email
+      pass: "iegc lwvn hwnl hgav", // Replace with your Gmail password
+    },
+  });
+
+  const mailOptions = {
+    from: "cgshehan@gmail.com", // Replace with your Gmail email
+    to,
+    subject,
+    text: message,
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`Email sent: ${info.response}`);
+  } catch (error) {
+    console.error(`Error sending email: ${error}`);
+  }
+};
 
 
 // eslint-disable-next-line require-jsdoc

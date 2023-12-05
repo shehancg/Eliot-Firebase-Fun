@@ -110,23 +110,35 @@ exports.NewAlertNodeAction = functions.runWith({memory: "1GB"}).database.ref("/a
 
       let smsSent = false; // Flag to track if SMS sending was successful
 
+      let emailSent = false; // Flag to track if Email sending was successful
+
       // Access Firestore to retrieve the phoneNumber based on RPID
       try {
         // eslint-disable-next-line max-len
         const staffSnapshot = await admin.firestore().collection("staff").doc(rpid).get();
         if (staffSnapshot.exists) {
           const phoneNumber = staffSnapshot.data().phoneNo;
+
+          const email = staffSnapshot.data().email;
+
           // Send an SMS
           // eslint-disable-next-line max-len
-          // await sendSMS(apiKey, phoneNumber, `Alert for RPID ${rpid}: ${alertType}`);
-          // eslint-disable-next-line max-len
           await sendSMS(apiKey, phoneNumber, `${alertType} Alert !\nLocation - ${line}\nSMc ID - ${sewingMachineID}\nTime: ${requestTime}`);
+
           // eslint-disable-next-line max-len
           console.log(`Alert ! [Unit - ${unit}] [Line - ${line}] [SMc ID - ${sewingMachineID}] [Time : ${requestTime}]`);
           console.log(`SMS sent to ${phoneNumber} for alertId: ${alertId}`);
           console.log(`SMS API Response:`, sendSMS); // Print the SMS response
 
           smsSent = true; // Set the flag to true if SMS is sent successfully
+
+          // Send an email
+          // eslint-disable-next-line max-len
+          await sendEmail(email, `Production Alert`, `${alertType} Alert !\nLocation - ${line}\nSMc ID - ${sewingMachineID}\nTime: ${requestTime}`);
+          console.log(`Email sent to ${email}`);
+
+          // eslint-disable-next-line max-len
+          emailSent = true; // Set the flag to true if Email is sent successfully
         } else {
           console.error(`No staff record found for RPID: ${rpid}`);
         }
@@ -147,6 +159,21 @@ exports.NewAlertNodeAction = functions.runWith({memory: "1GB"}).database.ref("/a
         }
       } catch (error) {
         console.error(`Error updating smsStatus: ${error}`);
+      }
+
+      // Update the emailSent node based on the Email sending result
+      try {
+        // eslint-disable-next-line max-len
+        const emailStatusRef = admin.database().ref(`/alerts/${alertId}/emailStatus`);
+        if (emailSent) {
+          // If SMS was sent successfully, set smsStatus to "SENT"
+          await emailStatusRef.set("SENT");
+        } else {
+          // If SMS sending failed, set smsStatus to "FAILED"
+          await emailStatusRef.set("FAILED");
+        }
+      } catch (error) {
+        console.error(`Error updating emailStatus: ${error}`);
       }
 
       // Send an HTTP request to TimerFunction with the alertId

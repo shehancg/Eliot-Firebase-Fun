@@ -269,13 +269,13 @@ const sendEmail = async (to, subject, message) => {
     port: 587,
     secure: false,
     auth: {
-      user: "cgshehan@gmail.com", // Replace with your Gmail email
-      pass: "iegc lwvn hwnl hgav", // Replace with your Gmail password
+      user: "eliotalertsystem@gmail.com", // Replace with your Gmail email
+      pass: "exzz hcrh usmz mozp", // Replace with your Gmail password
     },
   });
 
   const mailOptions = {
-    from: "cgshehan@gmail.com", // Replace with your Gmail email
+    from: "eliotalertsystem@gmail.com", // Replace with your Gmail email
     to,
     subject,
     text: message,
@@ -633,7 +633,11 @@ exports.updateGraphDefectCounts = functions.database.ref("/defects/{obbID}/RMGde
 // COLLECTION productionEfficiencyAcrossOperations
 // Define the scheduled function
 // eslint-disable-next-line max-len
-exports.updateValuesProductionEff = functions.pubsub.schedule("00 2 * * *")
+exports.updateValuesProductionEff = functions.runWith({
+  // eslint-disable-next-line max-len
+  timeoutSeconds: 540, // Set the maximum execution time to 540 seconds (9 minutes)
+// eslint-disable-next-line max-len
+}).pubsub.schedule("00 2 * * *")
     .timeZone("Asia/Colombo")
     .onRun(async (context) => {
       try {
@@ -695,7 +699,11 @@ exports.updateValuesProductionEff = functions.pubsub.schedule("00 2 * * *")
 
 // COLLECTION productionFlowAcrossOperations
 // eslint-disable-next-line max-len
-exports.updateValuesProductionFlow = functions.pubsub.schedule("00 2 * * *") // Runs every day at 11:00 PM
+exports.updateValuesProductionFlow = functions.runWith({
+  // eslint-disable-next-line max-len
+  timeoutSeconds: 540, // Set the maximum execution time to 540 seconds (9 minutes)
+// eslint-disable-next-line max-len
+}).pubsub.schedule("00 2 * * *") // Runs every day at 11:00 PM
     .timeZone("Asia/Colombo") // Set the timezone to Colombo
     .onRun(async (context) => {
       try {
@@ -750,7 +758,11 @@ exports.updateValuesProductionFlow = functions.pubsub.schedule("00 2 * * *") // 
 
 // COLLECTION productionFlowAcrossOperations
 // eslint-disable-next-line max-len
-exports.updateOperatorEff = functions.pubsub.schedule("00 2 * * *") // Runs every day at 11:00 PM
+exports.updateOperatorEff = functions.runWith({
+  // eslint-disable-next-line max-len
+  timeoutSeconds: 540, // Set the maximum execution time to 540 seconds (9 minutes)
+// eslint-disable-next-line max-len
+}).pubsub.schedule("00 2 * * *") // Runs every day at 11:00 PM
     .timeZone("Asia/Colombo") // Set the timezone to Bangladesh
     .onRun(async (context) => {
       try {
@@ -789,7 +801,11 @@ exports.updateOperatorEff = functions.pubsub.schedule("00 2 * * *") // Runs ever
     });
 
 // eslint-disable-next-line max-len
-exports.updateHourlyVsActual = functions.pubsub.schedule("00 2 * * *")
+exports.updateHourlyVsActual = functions.runWith({
+  // eslint-disable-next-line max-len
+  timeoutSeconds: 540, // Set the maximum execution time to 540 seconds (9 minutes)
+// eslint-disable-next-line max-len
+}).pubsub.schedule("00 2 * * *")
     .timeZone("Asia/Colombo")
     .onRun(async (context) => {
       try {
@@ -842,7 +858,11 @@ exports.updateHourlyVsActual = functions.pubsub.schedule("00 2 * * *")
 
 
 // eslint-disable-next-line max-len
-exports.updateHourlyVsActualRMG = functions.pubsub.schedule("00 2 * * *")
+exports.updateHourlyVsActualRMG = functions.runWith({
+  // eslint-disable-next-line max-len
+  timeoutSeconds: 540, // Set the maximum execution time to 540 seconds (9 minutes)
+// eslint-disable-next-line max-len
+}).pubsub.schedule("00 2 * * *")
     .timeZone("Asia/Colombo")
     .onRun(async (context) => {
       try {
@@ -891,7 +911,11 @@ exports.updateHourlyVsActualRMG = functions.pubsub.schedule("00 2 * * *")
     });
 
 // eslint-disable-next-line max-len
-exports.updateTotalDefectCounts = functions.pubsub.schedule("00 02 * * *") // Runs every day at 8:31 PM UTC (2:31 AM Colombo time)
+exports.updateTotalDefectCounts = functions.runWith({
+  // eslint-disable-next-line max-len
+  timeoutSeconds: 540, // Set the maximum execution time to 540 seconds (9 minutes)
+// eslint-disable-next-line max-len
+}).pubsub.schedule("00 02 * * *") // Runs every day at 8:31 PM UTC (2:31 AM Colombo time)
     .timeZone("Asia/Colombo") // Set the timezone to Colombo
     .onRun(async (context) => {
       try {
@@ -928,7 +952,11 @@ exports.updateTotalDefectCounts = functions.pubsub.schedule("00 02 * * *") // Ru
 
 // COLLECTION smartTFLHeatMap
 // eslint-disable-next-line max-len
-exports.updateValuesHeatMap = functions.pubsub.schedule("00 2 * * *")
+exports.updateValuesHeatMap = functions.runWith({
+  // eslint-disable-next-line max-len
+  timeoutSeconds: 540, // Set the maximum execution time to 540 seconds (9 minutes)
+  memory: "1GB", // Set the memory allocation to 2GB
+}).pubsub.schedule("00 2 * * *")
     .timeZone("Asia/Colombo") // Set the timezone to Colombo
     .onRun(async (context) => {
       try {
@@ -962,7 +990,7 @@ exports.updateValuesHeatMap = functions.pubsub.schedule("00 2 * * *")
                 // Update the values x and y to 'operation' and 0 respectively
                 await innerCollectionRef.update({
                   x: "operation",
-                  y: 0,
+                  y: -1,
                 });
 
                 // eslint-disable-next-line max-len
